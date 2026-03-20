@@ -7,8 +7,12 @@
   "exports": {
     ".": "./src/index.js"
   },
+  "files": [
+    "src/"
+  ],
   "scripts": {
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "benchmark": "node benchmark/run.js"
   },
   "keywords": [
     "markdown",
@@ -20,5 +24,8 @@
   "license": "MIT",
   "dependencies": {
     "marked": "^16.3.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.0.1"
   }
 }

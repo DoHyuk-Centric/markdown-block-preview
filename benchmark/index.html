@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>markdown-block-preview Benchmark</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 24px; }
+      h1 { font-size: 1.5rem; margin-bottom: 8px; }
+      p.desc { color: #666; margin-bottom: 24px; }
+      .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+      button { padding: 10px 20px; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 14px; cursor: pointer; }
+      button:hover { background: #1d4ed8; }
+      button:disabled { background: #94a3b8; cursor: not-allowed; }
+      select, input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+      #status { padding: 8px 16px; background: #fef3c7; border-radius: 6px; font-size: 13px; display: none; }
+      table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 24px; }
+      th { background: #1e293b; color: white; padding: 12px 16px; text-align: left; font-size: 13px; }
+      td { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-variant-numeric: tabular-nums; }
+      tr:last-child td { border-bottom: none; }
+      .faster { color: #16a34a; font-weight: 600; }
+      .slower { color: #dc2626; font-weight: 600; }
+      .hidden-render { position: absolute; left: -9999px; top: -9999px; visibility: hidden; }
+    </style>
+  </head>
+  <body>
+    <h1>markdown-block-preview Benchmark</h1>
+    <p class="desc">Full render (innerHTML 전체 교체) vs Block render (변경 블록만 교체) 실시간 비교</p>
+
+    <div class="controls">
+      <label>Blocks: <select id="blockCount">
+        <option value="10">10</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="300">300</option>
+        <option value="500">500</option>
+      </select></label>
+      <label>Iterations: <input id="iterations" type="number" value="500" min="10" max="5000" style="width:80px"></label>
+      <label>Changed blocks: <select id="changedBlocks">
+        <option value="1" selected>1</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50 (half)</option>
+        <option value="all">All</option>
+      </select></label>
+      <button id="runBtn" onclick="runBenchmark()">Run Benchmark</button>
+      <div id="status"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Avg</th>
+          <th>Median</th>
+          <th>P95</th>
+          <th>Min</th>
+          <th>Max</th>
+          <th>Speedup</th>
+        </tr>
+      </thead>
+      <tbody id="results">
+        <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:32px;">Run benchmark to see results</td></tr>
+      </tbody>
+    </table>
+
+    <div class="hidden-render">
+      <div id="full-container"></div>
+      <div id="block-container"></div>
+    </div>
+
+    <script type="module">
+      import { Marked } from "../node_modules/marked/lib/marked.esm.js";
+      import { splitMarkdownBlocks } from "../src/core/splitMarkdownBlocks.js";
+
+      const marked = new Marked({ breaks: true });
+
+      function generateMarkdown(blockCount) {
+        const types = [
+          (i) => `## Section ${i}\nLorem ipsum dolor sit amet, **consectetur** adipiscing elit. Sed do eiusmod tempor incididunt.`,
+          (i) => `- Item ${i}-a\n- Item ${i}-b with *emphasis*\n- Item ${i}-c with [link](https://example.com)`,
+          (i) => `> Blockquote ${i}: The only way to do great work is to love what you do.\n> — Steve Jobs`,
+          (i) => "```js\nfunction example" + i + "() {\n  return " + i + " * 2;\n}\n```",
+          (i) => `Paragraph ${i}: Virtual DOM은 메모리 내 트리 비교를 하지만, 이 라이브러리는 텍스트 레벨 비교를 수행합니다.`,
+        ];
+        const blocks = [];
+        for (let i = 0; i < blockCount; i++) blocks.push(types[i % types.length](i));
+        return blocks.join("\n\n");
+      }
+
+      function initBlocks(markdown, container) {
+        const blocks = splitMarkdownBlocks(markdown);
+        container.innerHTML = "";
+        blocks.forEach((block) => {
+          const div = document.createElement("div");
+          div.innerHTML = marked.parse(block);
+          container.appendChild(div);
+        });
+        return blocks;
+      }
+
+      function fullRender(markdown, container) {
+        container.innerHTML = marked.parse(markdown);
+      }
+
+      function blockRender(modifiedMarkdown, container, prevBlocks) {
+        const nextBlocks = splitMarkdownBlocks(modifiedMarkdown);
+        for (let i = 0; i < nextBlocks.length; i++) {
+          if (nextBlocks[i] !== prevBlocks[i]) {
+            const el = container.children[i];
+            if (el) el.innerHTML = marked.parse(nextBlocks[i]);
+          }
+        }
+        return nextBlocks;
+      }
+
+      function measure(fn, iterations) {
+        for (let i = 0; i < Math.min(20, iterations); i++) fn();
+        const times = [];
+        for (let i = 0; i < iterations; i++) {
+          const start = performance.now();
+          fn();
+          times.push(performance.now() - start);
+        }
+        times.sort((a, b) => a - b);
+        return {
+          avg: times.reduce((a, b) => a + b) / times.length,
+          median: times[Math.floor(times.length / 2)],
+          p95: times[Math.floor(times.length * 0.95)],
+          min: times[0],
+          max: times[times.length - 1],
+        };
+      }
+
+      function fmt(ms) { return ms < 0.01 ? "<0.01ms" : ms.toFixed(3) + "ms"; }
+
+      window.runBenchmark = async function () {
+        const btn = document.getElementById("runBtn");
+        const status = document.getElementById("status");
+        btn.disabled = true;
+        status.style.display = "block";
+        status.textContent = "Running...";
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        const blockCount = parseInt(document.getElementById("blockCount").value);
+        const iterations = parseInt(document.getElementById("iterations").value);
+        const changedSel = document.getElementById("changedBlocks").value;
+        const changedCount = changedSel === "all" ? blockCount : Math.min(parseInt(changedSel), blockCount);
+
+        const markdown = generateMarkdown(blockCount);
+        const originalBlocks = splitMarkdownBlocks(markdown);
+
+        const modifiedBlocks = [...originalBlocks];
+        for (let i = 0; i < changedCount; i++) {
+          modifiedBlocks[i] += " (edited)";
+        }
+        const modifiedMarkdown = modifiedBlocks.join("\n\n");
+
+        const fc = document.getElementById("full-container");
+        fullRender(markdown, fc);
+        const fr = measure(() => fullRender(modifiedMarkdown, fc), iterations);
+
+        const bc = document.getElementById("block-container");
+        const pb = initBlocks(markdown, bc);
+        const br = measure(() => blockRender(modifiedMarkdown, bc, pb), iterations);
+
+        const speedup = fr.avg / br.avg;
+
+        document.getElementById("results").innerHTML = `
+          <tr>
+            <td><strong>Full render</strong></td>
+            <td>${fmt(fr.avg)}</td><td>${fmt(fr.median)}</td><td>${fmt(fr.p95)}</td>
+            <td>${fmt(fr.min)}</td><td>${fmt(fr.max)}</td>
+            <td>baseline</td>
+          </tr>
+          <tr>
+            <td><strong>Block render</strong></td>
+            <td>${fmt(br.avg)}</td><td>${fmt(br.median)}</td><td>${fmt(br.p95)}</td>
+            <td>${fmt(br.min)}</td><td>${fmt(br.max)}</td>
+            <td class="${speedup >= 1 ? 'faster' : 'slower'}">${speedup.toFixed(1)}x ${speedup >= 1 ? 'faster' : 'slower'}</td>
+          </tr>
+        `;
+
+        status.textContent = `Done! ${blockCount} blocks, ${changedCount} changed, ${iterations} iterations`;
+        btn.disabled = false;
+      };
+    </script>
+  </body>
+</html>

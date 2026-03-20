@@ -8,7 +8,7 @@ export function splitMarkdownBlocks(markdown) {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed.startsWith("```")) {
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
       currentBlock.push(line);
       inCodeBlock = !inCodeBlock;
       continue;
