@@ -117,7 +117,7 @@ open benchmark/index.html
 | Block render | 2.814ms | 2.673ms | 4.124ms | 2.301ms | 9.443ms | 0.8x     |
 
 > 💡 변경된 블록 수가 적을수록 Block render의 이점이 극대화됩니다.  
-> 전체 블록이 변경되는 경우 Full render와 동등한 수준이며, 이 경우 내부적으로 fallback 처리됩니다.
+> 전체 블록이 변경되는 경우에는 Full render와 성능이 비슷하거나 소폭 낮을 수 있습니다.
 
 ---
 
