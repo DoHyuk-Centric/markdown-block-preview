@@ -1,9 +1,7 @@
-import { marked } from "marked";
+import { Marked } from "marked";
 import { splitMarkdownBlocks } from "./core/splitMarkdownBlocks.js";
-import { getCurrentBlockIndex } from "./core/getCurrentBlockIndex.js";
 import { syncBlockStructure } from "./core/syncBlockStructure.js";
 import { initialRender } from "./render/initialRender.js";
-import { updateCurrentBlock } from "./render/updateCurrentBlock.js";
 
 export function setupMarkdownPreview({ textarea, preview, breaks = true }) {
   if (!(textarea instanceof HTMLTextAreaElement)) {
@@ -14,13 +12,12 @@ export function setupMarkdownPreview({ textarea, preview, breaks = true }) {
     throw new Error("preview는 HTMLElement여야 합니다.");
   }
 
-  marked.setOptions({ breaks });
+  const marked = new Marked({ breaks });
 
   let prevBlocks = [];
 
   function handleInput() {
     const markdown = textarea.value;
-    const cursorIndex = textarea.selectionStart;
     const nextBlocks = splitMarkdownBlocks(markdown);
 
     const result = syncBlockStructure({
@@ -35,17 +32,16 @@ export function setupMarkdownPreview({ textarea, preview, breaks = true }) {
       return;
     }
 
-    const currentBlockIndex = getCurrentBlockIndex(markdown, cursorIndex);
+    for (let i = 0; i < nextBlocks.length; i++) {
+      if (nextBlocks[i] !== prevBlocks[i]) {
+        const blockEl = preview.children[i];
+        if (blockEl) {
+          blockEl.innerHTML = marked.parse(nextBlocks[i]);
+        }
+      }
+    }
 
-    updateCurrentBlock({
-      blockIndex: currentBlockIndex,
-      nextBlocks,
-      prevBlocks,
-      preview,
-      marked,
-    });
-
-    prevBlocks[currentBlockIndex] = nextBlocks[currentBlockIndex];
+    prevBlocks = [...nextBlocks];
   }
 
   prevBlocks = initialRender({
