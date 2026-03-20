@@ -1,0 +1,24 @@
+{
+  "name": "markdown-block-preview",
+  "version": "1.0.1",
+  "type": "module",
+  "description": "Block-based incremental rendering for markdown live preview",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "markdown",
+    "preview",
+    "incremental-rendering",
+    "block-preview"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "marked": "^16.3.0"
+  }
+}
