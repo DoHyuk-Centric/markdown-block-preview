@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "npx serve .",
+    "test": "node --test \"test/*.test.js\"",
     "benchmark": "node benchmark/run.js"
   },
   "keywords": [
@@ -20,8 +21,16 @@
     "incremental-rendering",
     "block-preview"
   ],
-  "author": "",
+  "author": "DoHyuk-Centric (https://github.com/DoHyuk-Centric)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DoHyuk-Centric/markdown-block-preview.git"
+  },
+  "homepage": "https://github.com/DoHyuk-Centric/markdown-block-preview#readme",
+  "bugs": {
+    "url": "https://github.com/DoHyuk-Centric/markdown-block-preview/issues"
+  },
   "dependencies": {
     "marked": "^16.3.0"
   },

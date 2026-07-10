@@ -173,6 +173,18 @@ instance.rerender();
 
 ---
 
+## ✅ Test
+
+```bash
+npm install
+npm test
+```
+
+`test/public-api.test.js`는 위 README에 문서화된 사용법과 API를 그대로 실행합니다.
+export 이름이 바뀌거나 옵션 동작이 달라지면 CI가 실패하므로, README와 코드가 조용히 어긋나지 않습니다.
+
+---
+
 ## 📄 License
 
 MIT
